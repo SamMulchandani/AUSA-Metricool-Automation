@@ -27,6 +27,7 @@ import gspread
 from google.oauth2.service_account import Credentials
 from spotify_metrics import get_spotify_metrics
 
+
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 
 
@@ -48,7 +49,7 @@ def get_client_adc():
     return gspread.authorize(creds)
 
 
-def write_summary(spreadsheet_id, worksheet_name, month_label, platform_rows, client):
+def write_summary(spreadsheet_id, worksheet_name, month_label, platform_rows, client, youtube_shorts=None):
     """
     platform_rows: list of dicts in display order, e.g.
         [
@@ -84,3 +85,23 @@ def write_summary(spreadsheet_id, worksheet_name, month_label, platform_rows, cl
     ws.update("A9", [["", "CTR", "Clicks", "Reach", "Impressions", "New Listeners", "Cost Per New Listener", "Streams", "Cost Per Stream", "Spend"]])
     spotify = get_spotify_metrics()
     ws.update("A10", [["Spotify", spotify["CTR"], spotify["CLICKS"], spotify["REACH"], spotify["IMPRESSIONS"], spotify["NEW_LISTENERS"], spotify["COST_PER_NEW_LISTENER"], spotify["STREAMS"], spotify["COST_PER_STREAM"], spotify["SPEND"]]])
+
+    # Youtube Shorts
+    ws.update("A13", [["Youtube Shorts Performance"]])
+    ws.update("A14", [["Video", "Video Views", "Avg. View Duration"]])
+    # each short listed here with their views and avg view duration
+    # 
+    if youtube_shorts:
+        shorts_rows = [
+            [
+                short.get("title") or short.get("watchUrl", "NA"),
+                short.get("views", "NA"),
+                short.get("averageViewDuration", "NA"),
+            ]
+            for short in youtube_shorts
+        ]
+        ws.update("A15", shorts_rows)
+    else:
+        ws.update("A15", [["No Shorts published this period", "", ""]]) 
+
+    

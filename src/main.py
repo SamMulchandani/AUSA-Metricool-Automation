@@ -4,6 +4,7 @@ from network_find_funcs import (
     get_instagram_posts,
     get_facebook_posts,
     get_linkedin_posts,
+    get_youtube_posts,
     get_date_range,
 )
 from aggregate import aggregate_platform
@@ -23,6 +24,7 @@ def main():
     instagram_posts = get_instagram_posts()
     facebook_posts = get_facebook_posts()
     linkedin_posts = get_linkedin_posts()
+    youtube_shorts = get_youtube_posts()
 
     # Order matches the screenshot (LinkedIn, Facebook, Instagram) minus X/Threads.
     platform_rows = [
@@ -32,7 +34,7 @@ def main():
     ]
 
     client = get_client_adc()
-    write_summary(SPREADSHEET_ID, WORKSHEET_NAME, month_label(), platform_rows, client)
+    write_summary(SPREADSHEET_ID, WORKSHEET_NAME, month_label(), platform_rows, client, youtube_shorts)
 
     print(f"Synced {month_label()} summary to '{WORKSHEET_NAME}':")
     for row in platform_rows:

@@ -131,6 +131,34 @@ def get_linkedin_posts():
 
     return [post for post in data if is_podcast_post(post, "description", "title", "comment")]
 
+
+def get_shorts_in_range(posts, start: str, end: str):
+    # start/end as "YYYY-MM-DDTHH:MM:SS" strings, same format as the payload
+    return [
+        p for p in posts
+        if p.get("videoType") == "SHORT"
+        and start <= p["publishedAt"]["dateTime"] <= end
+    ]
+
+def get_youtube_posts():
+    url = "https://app.metricool.com/api/v2/analytics/posts/youtube?blogId=5784679&userId=5193289"
+    parameters = {
+            "from" : start,
+            "to" : end,
+            "timezone" : 'America/New_York' 
+        }
+
+    response = requests.get(url=url, headers={"X-Mc-Auth" : os.environ.get("METRICOOL_KEY")}, params=parameters)
+
+    data = []
+    if response.status_code == 200:
+        data = response.json().get("data")
+
+    data = get_shorts_in_range(data, start, end)
+
+    return [post for post in data if is_podcast_post(post, "description", "title")]
+
+
 # instagram_posts = get_instagram_posts('2026-07-01T00:00:00', '2026-07-31T00:00:00')
 # print(len(instagram_posts))
 # print(instagram_posts)
