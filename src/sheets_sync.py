@@ -92,6 +92,11 @@ def write_summary(spreadsheet_id, worksheet_name, month_label, platform_rows, cl
     # each short listed here with their views and avg view duration
     # 
     if youtube_shorts:
+        averageWatchTime = 0
+        for short in youtube_shorts:
+            averageWatchTime += short.get("averageViewDuration")
+        averageWatchTime /= len(youtube_shorts)
+
         shorts_rows = [
             [
                 short.get("title") or short.get("watchUrl", "NA"),
@@ -100,6 +105,7 @@ def write_summary(spreadsheet_id, worksheet_name, month_label, platform_rows, cl
             ]
             for short in youtube_shorts
         ]
+        shorts_rows.append(["", "", averageWatchTime])
         ws.update("A15", shorts_rows)
     else:
         ws.update("A15", [["No Shorts published this period", "", ""]]) 
