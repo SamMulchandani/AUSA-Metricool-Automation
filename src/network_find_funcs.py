@@ -1,21 +1,10 @@
 import requests
 import os
-from datetime import datetime
-from zoneinfo import ZoneInfo
+from date_range import *
 # import json
 
 
-def get_date_range():
-    today = datetime.now(ZoneInfo("America/New_York")).date()
-    current_month_start = today.replace(day=1)
-    previous_month = current_month_start.month - 1 or 12
-    previous_year = current_month_start.year if current_month_start.month > 1 else current_month_start.year - 1
-    previous_month_start = current_month_start.replace(
-        year=previous_year,
-        month=previous_month,
-    )
-    # return f"{previous_month_start}T00:00:00", f"{current_month_start}T00:00:00"
-    return f"{previous_month_start}T00:00:00", f"{current_month_start}T00:00:00"
+
 
 start, end = get_date_range()[0], get_date_range()[1]
 
@@ -66,7 +55,7 @@ def get_instagram_posts():
         data = response.json().get("data")
 
     for post in data:
-        if is_podcast_post(post, "content"):
+        if is_podcast_post(post, "content") in post.get("content"):
             posts.append(post)
 
     return posts
@@ -133,7 +122,6 @@ def get_linkedin_posts():
 
 
 def get_shorts_in_range(posts, start: str, end: str):
-    # start/end as "YYYY-MM-DDTHH:MM:SS" strings, same format as the payload
     return [
         p for p in posts
         if p.get("videoType") == "SHORT"
@@ -157,17 +145,3 @@ def get_youtube_posts():
     data = get_shorts_in_range(data, start, end)
 
     return [post for post in data if is_podcast_post(post, "description", "title")]
-
-
-# instagram_posts = get_instagram_posts('2026-07-01T00:00:00', '2026-07-31T00:00:00')
-# print(len(instagram_posts))
-# print(instagram_posts)
-
-# facebook_posts = get_facebook_posts('2026-07-01T00:00:00', '2026-07-31T00:00:00')
-# print(len(facebook_posts))
-# print(facebook_posts)
-
-# linkedin_posts = get_linkedin_posts(get_date_range()[0], get_date_range()[1])
-# print(len(linkedin_posts))
-# print(linkedin_posts)
-

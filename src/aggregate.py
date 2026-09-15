@@ -1,21 +1,7 @@
-# aggregate.py
-#
-# Turns a list of raw post dicts (as returned by get_instagram_posts,
-# get_facebook_posts, get_linkedin_posts) into the per-platform totals
-# needed for the summary table: Reach, Impressions/Views, Total Posts.
-#
-# IMPORTANT: The exact JSON key Metricool uses for "reach" and
-# "views/impressions" varies by field naming in their API and isn't
-# something I could verify without hitting the live endpoint. Run
-# inspect_fields.py once against your real data, check the printed
-# keys for one sample post per platform, and adjust the *_KEYS lists
-# below if they don't match.
-
-# Try these keys in order; first one present (and not None) wins.
 REACH_KEYS = ["reach", "impressionsUnique", "organicReach", "totalReach"]
 VIEWS_KEYS = ["impressions", "impressionsTotal", "views", "videoViews", "totalViews", "blueReelsPlayCount"]
-AVERAGE_KEYS = ["postVideoAvgTimeWatchedSeconds", "timeWatchedForVideoViews", "averageWatchTime"]
-URL_KEYS = ["url", "link", "reelUrl"]
+AVERAGE_KEYS = ["postVideoAvgTimeWatchedSeconds", "timeWatchedForVideoViews", "averageWatchTime", "averageViewDuration"]
+URL_KEYS = ["url", "link", "reelUrl", "watchUrl"]
 
 def _first_present(d, keys):
     for k in keys:
@@ -92,6 +78,8 @@ def aggregate_platform(posts, reach_keys=REACH_KEYS, views_keys=VIEWS_KEYS, aver
             total_interactions += post["engagement"] * post["impressions"] / 100
         elif "engagement" in post and "impressions" in post and post["engagement"] > 1:
             total_interactions += post["engagement"] * post["impressions"] / 100
+        elif "dislikes" in post and post["dislikes"] is not None:
+            total_interactions += total_comments + total_likes + total_shares + post["dislikes"]
 
 
         if r is not None:
@@ -116,5 +104,5 @@ def aggregate_platform(posts, reach_keys=REACH_KEYS, views_keys=VIEWS_KEYS, aver
         "shares": total_shares,
         "clicks": total_clicks if clicks_seen else None,
         "reactions": total_reactions if reactions_seen else None,
-        "average_time_watched_for_video_views": total_average_watch_time/total_posts if avg_watch_time_calculable else None
+        "average_time_watched_for_video_views": total_average_watch_time/total_posts if avg_watch_time_calculable else 0
     }

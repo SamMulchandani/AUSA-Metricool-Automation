@@ -5,12 +5,13 @@ from network_find_funcs import (
     get_facebook_posts,
     get_linkedin_posts,
     get_youtube_posts,
-    get_date_range,
 )
-from aggregate import aggregate_platform
-from sheets_sync import write_summary, get_client_adc  # or get_client + a key file path
 
-# --- Configure these for your sheet ---
+from date_range import get_date_range
+
+from aggregate import aggregate_platform
+from sheets_sync import write_summary, get_client_adc  
+
 SPREADSHEET_ID = "10_pz7I2u27s-eTKsatJDAbuZ6QnEpJTF9ZPAq2vk_EA"
 WORKSHEET_NAME = "Monthly Review"
 
@@ -26,11 +27,11 @@ def main():
     linkedin_posts = get_linkedin_posts()
     youtube_shorts = get_youtube_posts()
 
-    # Order matches the screenshot (LinkedIn, Facebook, Instagram) minus X/Threads.
     platform_rows = [
         {"platform": "LinkedIn", **aggregate_platform(linkedin_posts)},
         {"platform": "Facebook", **aggregate_platform(facebook_posts)},
         {"platform": "Instagram", **aggregate_platform(instagram_posts)},
+        {"platform": "Youtube Shorts", **aggregate_platform(youtube_shorts)}
     ]
 
     client = get_client_adc()

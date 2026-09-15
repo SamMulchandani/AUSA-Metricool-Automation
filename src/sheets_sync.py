@@ -24,8 +24,13 @@
 # pip install gspread google-auth
 
 import gspread
+from date_range import get_date_range
+
+# toggle between these two to switch between local and cloud run
 from google.oauth2.service_account import Credentials
-from spotify_metrics import get_spotify_metrics
+# from google.oauth2.credentials import Credentials
+
+from spotify_metrics import get_monthly_spotify_metrics, get_all_time_spotify_metrics
 
 
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
@@ -45,8 +50,48 @@ def get_client_adc():
     """
     import google.auth
 
+    # toggle between these two to switch between local and cloud run
     creds, _ = google.auth.default(scopes=SCOPES)
+    # creds = Credentials.from_authorized_user_file("token.json", SCOPES)
     return gspread.authorize(creds)
+
+
+def get_looker_sheet():
+    SPREADSHEET_ID = "10_pz7I2u27s-eTKsatJDAbuZ6QnEpJTF9ZPAq2vk_EA"
+    WORKSHEET_NAME = "Looker Source"
+    sh = get_client_adc().open_by_key(SPREADSHEET_ID)
+    try:
+        ws = sh.worksheet(WORKSHEET_NAME)
+    except gspread.WorksheetNotFound:
+        ws = sh.add_worksheet(title=WORKSHEET_NAME, rows=20, cols=6)
+
+    return ws
+
+def get_paid_ads_fiscal_sheet():
+    SPREADSHEET_ID = "10_pz7I2u27s-eTKsatJDAbuZ6QnEpJTF9ZPAq2vk_EA"
+    WORKSHEET_NAME = "Paid Ads Fiscal Year"
+    sh = get_client_adc().open_by_key(SPREADSHEET_ID)
+    try:
+        ws = sh.worksheet(WORKSHEET_NAME)
+    except gspread.WorksheetNotFound:
+        ws = sh.add_worksheet(title=WORKSHEET_NAME, rows=20, cols=6)
+
+    return ws
+
+
+def clear_bottom_row(ws):
+    """Clear only the final non-empty row in a worksheet."""
+    values = ws.get_all_values()
+    if not values:
+        return
+
+    last_row = len(values)
+    last_col = max(len(row) for row in values)
+    if last_col == 0:
+        return
+
+    end_cell = gspread.utils.rowcol_to_a1(last_row, last_col)
+    ws.update(f"A{last_row}:{end_cell}", [[""] * last_col])
 
 
 def write_summary(spreadsheet_id, worksheet_name, month_label, platform_rows, client, youtube_shorts=None):
@@ -76,19 +121,22 @@ def write_summary(spreadsheet_id, worksheet_name, month_label, platform_rows, cl
         clicks_val = row["clicks"] if row["clicks"] is not None else "NA"
         reactions_val = row["reactions"] if row["reactions"] is not None else "NA"
         time_watched_val = row["average_time_watched_for_video_views"] if row["average_time_watched_for_video_views"] is not None else "NA"
-        urls_val1 = row["top_two_impression_urls"][0] if row["top_two_impression_urls"] is not None and row["top_two_impression_urls"][0] is not None else "NA"
-        urls_val2 = row["top_two_impression_urls"][1] if row["top_two_impression_urls"] is not None and row["top_two_impression_urls"][1] is not None else "NA"
+        urls_val1 = row["top_two_impression_urls"][0] if len(row["top_two_impression_urls"]) > 0 and row["top_two_impression_urls"] is not None and row["top_two_impression_urls"][0] is not None else "NA"
+        urls_val2 = row["top_two_impression_urls"][1] if len(row["top_two_impression_urls"]) > 1 and row["top_two_impression_urls"] is not None and row["top_two_impression_urls"][1] is not None else "NA"
         rows.append([row["platform"], reach_val, row["impressions"], row["interactions"], row["likes"], row["comments"], row["shares"], clicks_val, reactions_val, time_watched_val, urls_val1, urls_val2, row["total_posts"]])
     ws.update("A4", rows)
 
+
     # Spotify column labels
-    ws.update("A9", [["", "CTR", "Clicks", "Reach", "Impressions", "New Listeners", "Cost Per New Listener", "Streams", "Cost Per Stream", "Spend"]])
-    spotify = get_spotify_metrics()
-    ws.update("A10", [["Spotify", spotify["CTR"], spotify["CLICKS"], spotify["REACH"], spotify["IMPRESSIONS"], spotify["NEW_LISTENERS"], spotify["COST_PER_NEW_LISTENER"], spotify["STREAMS"], spotify["COST_PER_STREAM"], spotify["SPEND"]]])
+    ws.update("A10", [["", "CTR", "Clicks", "Reach", "Impressions", "Listeners", "New Listeners", "Streams", "New Listener Streams", "Cost Per Stream", "Cost Per New Listener", "Spend", "New Listener Conversion Rate"]])
+    spotify = get_monthly_spotify_metrics()
+    spotify_row = ["Spotify", spotify["CTR"], spotify["CLICKS"], spotify["REACH"], spotify["IMPRESSIONS"], spotify["LISTENERS"], spotify["NEW_LISTENERS"], spotify["STREAMS"], spotify["NEW_LISTENER_STREAMS"], spotify["COST_PER_STREAM"], spotify["COST_PER_NEW_LISTENER"], spotify["SPEND"], spotify["NEW_LISTENER_CONVERSION_RATE"]]
+    # "IMPRESSIONS", "CLICKS", "SPEND", "REACH", "CPM", "CTR", "LISTENERS", "CONVERSION_RATE", "NEW_LISTENER_CONVERSION_RATE", "STREAMS", "NEW_LISTENER_STREAMS", "NEW_LISTENERS", "AVG_STREAMS_PER_LISTENER"
+    ws.update("A11", [spotify_row])
 
     # Youtube Shorts
-    ws.update("A13", [["Youtube Shorts Performance"]])
-    ws.update("A14", [["Video", "Video Views", "Avg. View Duration"]])
+    ws.update("A14", [["Youtube Shorts Performance"]])
+    ws.update("A15", [["Video", "Video Views", "Avg. View Duration"]])
     # each short listed here with their views and avg view duration
     # 
     if youtube_shorts:
@@ -110,4 +158,31 @@ def write_summary(spreadsheet_id, worksheet_name, month_label, platform_rows, cl
     else:
         ws.update("A15", [["No Shorts published this period", "", ""]]) 
 
+    # Looker sheet append
+    looker_date_label = get_date_range()[0][:10]
+    looker_list = [looker_date_label]
+    for row in rows:
+        # 1 -> 10
+        for i in range(1, 10):
+            if row[i] != "NA":
+                looker_list.append(row[i])
+    for i in range(1,len(spotify_row)):
+        looker_list.append(spotify_row[i])
+
+    print(looker_list)
+    looker_sheet = get_looker_sheet()
+    looker_sheet.append_row(looker_list)
+
+    # Paid ads append
+    fiscal_sheet = get_paid_ads_fiscal_sheet()
+
+    # 
+    monthly_row = [month_label, spotify["CTR"], spotify["CLICKS"], spotify["REACH"], spotify["IMPRESSIONS"], spotify["LISTENERS"], spotify["NEW_LISTENERS"], spotify["STREAMS"], spotify["NEW_LISTENER_STREAMS"], spotify["COST_PER_STREAM"], spotify["COST_PER_NEW_LISTENER"], spotify["SPEND"], spotify["NEW_LISTENER_CONVERSION_RATE"]]
+
+    totals = get_all_time_spotify_metrics()
+    totals_row = ["TOTAL", totals["CTR"], totals["CLICKS"], totals["REACH_approx_upper_bound"], totals["IMPRESSIONS"], totals["LISTENERS_approx_upper_bound"], totals["NEW_LISTENERS"], totals["STREAMS"], totals["NEW_LISTENER_STREAMS"], totals["COST_PER_STREAM"], totals["COST_PER_NEW_LISTENER"], totals["SPEND"], "NA"]
+
+    clear_bottom_row(fiscal_sheet)
+    fiscal_sheet.append_row(monthly_row)
+    fiscal_sheet.append_row(totals_row)
     
