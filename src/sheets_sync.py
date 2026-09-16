@@ -27,8 +27,8 @@ import gspread
 from date_range import get_date_range
 
 # toggle between these two to switch between local and cloud run
-from google.oauth2.service_account import Credentials
-# from google.oauth2.credentials import Credentials
+# from google.oauth2.service_account import Credentials
+from google.oauth2.credentials import Credentials
 
 from spotify_metrics import get_monthly_spotify_metrics, get_all_time_spotify_metrics
 
@@ -51,8 +51,8 @@ def get_client_adc():
     import google.auth
 
     # toggle between these two to switch between local and cloud run
-    creds, _ = google.auth.default(scopes=SCOPES)
-    # creds = Credentials.from_authorized_user_file("token.json", SCOPES)
+    # creds, _ = google.auth.default(scopes=SCOPES)
+    creds = Credentials.from_authorized_user_file("token.json", SCOPES)
     return gspread.authorize(creds)
 
 
@@ -154,9 +154,9 @@ def write_summary(spreadsheet_id, worksheet_name, month_label, platform_rows, cl
             for short in youtube_shorts
         ]
         shorts_rows.append(["", "", averageWatchTime])
-        ws.update("A15", shorts_rows)
+        ws.update("A16", shorts_rows)
     else:
-        ws.update("A15", [["No Shorts published this period", "", ""]]) 
+        ws.update("A16", [["No Shorts published this period", "", ""]]) 
 
     # Looker sheet append
     looker_date_label = get_date_range()[0][:10]

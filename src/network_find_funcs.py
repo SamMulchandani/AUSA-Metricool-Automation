@@ -55,7 +55,7 @@ def get_instagram_posts():
         data = response.json().get("data")
 
     for post in data:
-        if is_podcast_post(post, "content") in post.get("content"):
+        if is_podcast_post(post, "content"):
             posts.append(post)
 
     return posts
